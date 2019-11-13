@@ -7,9 +7,13 @@
   "dependencies": {
     "express": "^4.17.1"
   },
+  "scripts": {
+    "build": "rollup --config"
+  },
   "devDependencies": {
     "@babel/core": "^7.7.2",
     "@babel/preset-env": "^7.7.1",
+    "@rollup/plugin-json": "^4.0.0",
     "eslint": "6.1.0",
     "eslint-config-airbnb-base": "14.0.0",
     "eslint-plugin-import": "^2.18.2",
