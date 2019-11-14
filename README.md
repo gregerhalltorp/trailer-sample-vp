@@ -13,7 +13,7 @@
 
 ### "Prod"
 
-1. yarn build
+1. `yarn build`
 2. `tmdbApiKey=<Your key here> node build/index.js`
 
 ## TODOS:
