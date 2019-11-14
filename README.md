@@ -2,8 +2,9 @@
 
 ## Installation
 
-1. Clone the repo
-2. `yarn`
+1. Clone the repo `git clone git@github.com:gregerhalltorp/trailer-sample-vp.git`
+2. `cd trailer-sample-vp`
+3. `yarn`
 
 ## Running
 
