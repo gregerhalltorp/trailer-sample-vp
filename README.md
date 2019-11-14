@@ -15,3 +15,8 @@
 
 1. yarn build
 2. `tmdbApiKey=<Your key here> node build/index.js`
+
+## TODOS:
+
+- Handle other sites than YouTube (tmdb supports videos from Vimeo and maybe more)
+  _Excluded due to time constraints, would require a lot of analysis_
