@@ -2,28 +2,13 @@ import express from 'express';
 import axios from 'axios';
 
 import valueIn from '../utils/valueIn';
+import tryCatch from '../utils/tryCatch';
+import asyncMiddleware from '../utils/asyncMiddleware';
 
-// TODO: Move these to utils
 // TODO: Take viaplay url as parameter
-// TODO: Handle bad results
 // TODO: validation and sanitation
+// TODO: Handle bad results
 // TODO: tests
-// TODO: performance
-const tryCatch = async fn => {
-  let err;
-  let res;
-  try {
-    res = await fn();
-  } catch (error) {
-    err = error;
-  }
-
-  return [err, res];
-};
-
-const asyncMiddleware = fn => (req, res, next) => {
-  Promise.resolve(fn(req, res, next)).catch(next);
-};
 
 const TRAILER = 'Trailer';
 const YOUTUBE = 'YouTube';
