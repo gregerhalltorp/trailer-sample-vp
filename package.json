@@ -9,10 +9,11 @@
     "express": "^4.17.1"
   },
   "scripts": {
-    "build": "rollup -c",
+    "build": "NODE_ENV=production rollup -c",
     "start": "nodemon build/index.js",
     "watch": "rollup -c -w",
-    "dev": "yarn watch & yarn start"
+    "dev": "yarn watch & yarn start",
+    "test": "jest"
   },
   "devDependencies": {
     "@babel/core": "^7.7.2",

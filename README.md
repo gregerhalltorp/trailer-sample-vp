@@ -19,7 +19,7 @@
 
 ## Usage
 
-Perform a http GET to http://localhost:3001?moveLink=[Viaplay movie resource link]
+Perform a http GET to http://localhost:3001?moveLink={movieLink} where movieLink is a Viaplay movie resource link.
 
 ## Overview
 
@@ -45,3 +45,4 @@ If any of the API calls are unsuccessful, appropriate responses will be returned
 
 - Handle other sites than YouTube (tmdb supports videos from Vimeo and maybe more)
   _Excluded due to time constraints, would require a lot of analysis_
+- Move util functions to lib and provide testing
