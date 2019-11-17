@@ -9,9 +9,12 @@ import {
   INVALID_MOVIELINK,
   NO_TRAILERS_FOUND,
 } from '../constants/messages';
-
-const TRAILER = 'Trailer';
-const YOUTUBE = 'YouTube';
+import {
+  getTmdbFindUrl,
+  getTmdbVideosUrl,
+  getYouTubeUrl,
+} from '../constants/urls';
+import { TRAILER, YOUTUBE } from '../constants/strings';
 
 // TODO: move error handling to custom error handler
 // Return error messages depending on NODE_ENV (actual error for debug, nice message for prod)
@@ -66,27 +69,26 @@ export const handleTrailerRequest = async (req, res) => {
   }
 
   const [findErr, findRes] = await tryCatch(() =>
-    axios.get(
-      `https://api.themoviedb.org/3/find/${imdbId}?api_key=${tmdbApiKey}&external_source=imdb_id`
-    )
+    axios.get(getTmdbFindUrl(imdbId, tmdbApiKey))
   );
 
   if (findErr) {
     console.log(findErr.response);
-    return res.status(200).send('No trailers found for resource link');
+    return res.status(200).send(NO_TRAILERS_FOUND);
   }
 
   const tmdbId = valueIn(findRes, ['data', 'movie_results', '0', 'id']);
+  if (!tmdbId) {
+    return res.status(200).send(NO_TRAILERS_FOUND);
+  }
 
   const [vidErr, vidRes] = await tryCatch(() =>
-    axios.get(
-      `https://api.themoviedb.org/3/movie/${tmdbId}/videos?api_key=${tmdbApiKey}`
-    )
+    axios.get(getTmdbVideosUrl(tmdbId, tmdbApiKey))
   );
 
   if (vidErr) {
     console.log(vidErr.response);
-    return res.status(200).send('No trailers found for resource link');
+    return res.status(200).send(NO_TRAILERS_FOUND);
   }
   const { data: vidData } = vidRes;
 
@@ -100,9 +102,9 @@ export const handleTrailerRequest = async (req, res) => {
       video => video.type === TRAILER && video.site === YOUTUBE && video.key
     );
     if (trailer) {
-      return res.status(200).send(`https://youtube.com/watch?v=${trailer.key}`);
+      return res.status(200).send(getYouTubeUrl(trailer.key));
     }
   }
 
-  return res.status(200).send('No trailers found for resource link');
+  return res.status(200).send(NO_TRAILERS_FOUND);
 };

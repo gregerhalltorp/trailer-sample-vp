@@ -7,6 +7,12 @@ import {
   INVALID_MOVIELINK,
   NO_TRAILERS_FOUND,
 } from '../constants/messages';
+import {
+  getTmdbFindUrl,
+  getTmdbVideosUrl,
+  getYouTubeUrl,
+} from '../constants/urls';
+import { TRAILER, YOUTUBE } from '../constants/strings';
 
 jest.mock('axios');
 jest.mock('url');
@@ -15,9 +21,55 @@ describe('controller', () => {
   describe('trailer request handler', () => {
     const req = {};
     const res = {};
+    const tmdbApiKey = 'tmdbApiKey';
     const movieLink = 'movieLink';
+    const imdbId = 'imdbId';
+    const tmdbId = 'tmdbId';
+    const trailerKey = 'trailerKey';
+
+    const viaPlayResponse = {
+      data: {
+        _embedded: {
+          'viaplay:blocks': [
+            {
+              _embedded: {
+                'viaplay:product': {
+                  content: {
+                    imdb: {
+                      id: imdbId,
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+    };
+    const tmdbFindResult = {
+      data: {
+        movie_results: [
+          {
+            id: tmdbId,
+          },
+        ],
+      },
+    };
+
+    const tmdbVideosResult = {
+      data: {
+        results: [
+          {
+            type: TRAILER,
+            site: YOUTUBE,
+            key: trailerKey,
+          },
+        ],
+      },
+    };
+
     beforeEach(() => {
-      req.context = { tmdbApiKey: 'tmdbApiKey' };
+      req.context = { tmdbApiKey };
       req.query = { movieLink };
       res.status = jest.fn().mockReturnThis();
       res.send = jest.fn();
@@ -28,9 +80,9 @@ describe('controller', () => {
       }));
     });
 
-    it('sends status 400 with correct error message if no movieLink on reqest.query', () => {
+    it('sends status 400 with correct error message if no movieLink on reqest.query', async () => {
       req.query.movieLink = '';
-      handleTrailerRequest(req, res);
+      await handleTrailerRequest(req, res);
 
       expect(res.status.mock.calls.length).toBe(1);
       expect(res.status.mock.calls[0][0]).toBe(400);
@@ -38,12 +90,12 @@ describe('controller', () => {
       expect(res.send.mock.calls[0][0]).toBe(NO_MOVIELINK);
     });
 
-    it('handles throw in url.URL (correct status and message)', () => {
+    it('handles throw in url.URL (correct status and message)', async () => {
       url.URL.mockImplementation(() => {
         throw new Error('testerror');
       });
 
-      handleTrailerRequest(req, res);
+      await handleTrailerRequest(req, res);
       expect(url.URL.mock.calls.length).toBe(1);
       expect(url.URL.mock.calls[0][0]).toBe(movieLink);
       expect(res.status.mock.calls.length).toBe(1);
@@ -52,27 +104,23 @@ describe('controller', () => {
       expect(res.send.mock.calls[0][0]).toBe(INVALID_MOVIELINK);
     });
 
-    it('handles movieLink protocol <> https (correct status and message)', () => {
+    it('handles movieLink protocol <> https (correct status and message)', async () => {
       url.URL.mockImplementation(() => ({ protocol: 'nothttps:' }));
 
-      handleTrailerRequest(req, res);
-      expect(url.URL.mock.calls.length).toBe(2);
-      expect(url.URL.mock.calls[1][0]).toBe(movieLink);
+      await handleTrailerRequest(req, res);
       expect(res.status.mock.calls.length).toBe(1);
       expect(res.status.mock.calls[0][0]).toBe(400);
       expect(res.send.mock.calls.length).toBe(1);
       expect(res.send.mock.calls[0][0]).toBe(INVALID_MOVIELINK);
     });
 
-    it('handles movieLink host <> content.viaplay.se', () => {
+    it('handles movieLink host <> content.viaplay.se', async () => {
       url.URL.mockImplementation(() => ({
         protocol: 'https:',
         host: 'notviaplay',
       }));
 
-      handleTrailerRequest(req, res);
-      expect(url.URL.mock.calls.length).toBe(3);
-      expect(url.URL.mock.calls[2][0]).toBe(movieLink);
+      await handleTrailerRequest(req, res);
       expect(res.status.mock.calls.length).toBe(1);
       expect(res.status.mock.calls[0][0]).toBe(400);
       expect(res.send.mock.calls.length).toBe(1);
@@ -85,8 +133,7 @@ describe('controller', () => {
       );
 
       await handleTrailerRequest(req, res);
-      expect(url.URL.mock.calls.length).toBe(4);
-      expect(url.URL.mock.calls[3][0]).toBe(movieLink);
+
       expect(axios.get.mock.calls.length).toBe(1);
       expect(axios.get.mock.calls[0][0]).toBe(movieLink);
       expect(res.status.mock.calls.length).toBe(1);
@@ -95,18 +142,88 @@ describe('controller', () => {
       expect(res.send.mock.calls[0][0]).toBe(INVALID_MOVIELINK);
     });
 
-    it('will handle no imdb id found', async () => {
+    it('handles no imdb id found', async () => {
       axios.get.mockResolvedValueOnce({});
 
       await handleTrailerRequest(req, res);
-      expect(url.URL.mock.calls.length).toBe(5);
-      expect(url.URL.mock.calls[4][0]).toBe(movieLink);
-      expect(axios.get.mock.calls.length).toBe(2);
-      expect(axios.get.mock.calls[1][0]).toBe(movieLink);
+
       expect(res.status.mock.calls.length).toBe(1);
       expect(res.status.mock.calls[0][0]).toBe(200);
       expect(res.send.mock.calls.length).toBe(1);
       expect(res.send.mock.calls[0][0]).toBe(NO_TRAILERS_FOUND);
+    });
+
+    it('handles error in call to tmdb find', async () => {
+      axios.get
+        .mockResolvedValueOnce(viaPlayResponse)
+        .mockImplementationOnce(() => Promise.reject(new Error('testerror')));
+
+      await handleTrailerRequest(req, res);
+
+      expect(axios.get.mock.calls.length).toBe(4);
+      expect(axios.get.mock.calls[3][0]).toBe(
+        getTmdbFindUrl(imdbId, tmdbApiKey)
+      );
+      expect(res.status.mock.calls.length).toBe(1);
+      expect(res.status.mock.calls[0][0]).toBe(200);
+      expect(res.send.mock.calls.length).toBe(1);
+      expect(res.send.mock.calls[0][0]).toBe(NO_TRAILERS_FOUND);
+    });
+
+    it('handles no tmdbId found', async () => {
+      axios.get
+        .mockResolvedValueOnce(viaPlayResponse)
+        .mockResolvedValueOnce({});
+
+      await handleTrailerRequest(req, res);
+
+      expect(res.status.mock.calls.length).toBe(1);
+      expect(res.status.mock.calls[0][0]).toBe(200);
+      expect(res.send.mock.calls.length).toBe(1);
+      expect(res.send.mock.calls[0][0]).toBe(NO_TRAILERS_FOUND);
+    });
+
+    it('handles error in call to tmdb videos', async () => {
+      axios.get
+        .mockResolvedValueOnce(viaPlayResponse)
+        .mockResolvedValueOnce(tmdbFindResult)
+        .mockImplementationOnce(() => Promise.reject(new Error('testerror')));
+
+      await handleTrailerRequest(req, res);
+      expect(axios.get.mock.calls.length).toBe(9);
+      expect(axios.get.mock.calls[8][0]).toBe(
+        getTmdbVideosUrl(tmdbId, tmdbApiKey)
+      );
+      expect(res.status.mock.calls.length).toBe(1);
+      expect(res.status.mock.calls[0][0]).toBe(200);
+      expect(res.send.mock.calls.length).toBe(1);
+      expect(res.send.mock.calls[0][0]).toBe(NO_TRAILERS_FOUND);
+    });
+
+    it('handles bad data from tmdb videos', async () => {
+      axios.get
+        .mockResolvedValueOnce(viaPlayResponse)
+        .mockResolvedValueOnce(tmdbFindResult)
+        .mockResolvedValueOnce({});
+
+      await handleTrailerRequest(req, res);
+      expect(res.status.mock.calls.length).toBe(1);
+      expect(res.status.mock.calls[0][0]).toBe(200);
+      expect(res.send.mock.calls.length).toBe(1);
+      expect(res.send.mock.calls[0][0]).toBe(NO_TRAILERS_FOUND);
+    });
+
+    it('does the good thing', async () => {
+      axios.get
+        .mockResolvedValueOnce(viaPlayResponse)
+        .mockResolvedValueOnce(tmdbFindResult)
+        .mockResolvedValueOnce(tmdbVideosResult);
+
+      await handleTrailerRequest(req, res);
+      expect(res.status.mock.calls.length).toBe(1);
+      expect(res.status.mock.calls[0][0]).toBe(200);
+      expect(res.send.mock.calls.length).toBe(1);
+      expect(res.send.mock.calls[0][0]).toBe(getYouTubeUrl(trailerKey));
     });
   });
 });
