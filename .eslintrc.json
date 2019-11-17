@@ -7,5 +7,12 @@
         "allow": ["_embedded"]
       }
     ]
+  },
+  "globals": {
+    "describe": true,
+    "it": true,
+    "expect": true,
+    "jest": true,
+    "beforeEach": true
   }
 }

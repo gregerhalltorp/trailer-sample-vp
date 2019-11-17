@@ -4,6 +4,11 @@ import url from 'url';
 
 import valueIn from '../utils/valueIn';
 import tryCatch from '../utils/tryCatch';
+import {
+  NO_MOVIELINK,
+  INVALID_MOVIELINK,
+  NO_TRAILERS_FOUND,
+} from '../constants/messages';
 
 const TRAILER = 'Trailer';
 const YOUTUBE = 'YouTube';
@@ -16,7 +21,7 @@ export const handleTrailerRequest = async (req, res) => {
   const { movieLink = '' } = req.query;
 
   if (!movieLink) {
-    return res.status(400).send('Please supply a movieLink query parameter');
+    return res.status(400).send(NO_MOVIELINK);
   }
 
   let parsedUrl;
@@ -26,25 +31,21 @@ export const handleTrailerRequest = async (req, res) => {
   } catch (err) {
     parseError = err;
   }
-
   // Some basic sanity checks
   if (
     parseError ||
     !parsedUrl ||
+    !parsedUrl.href || // This seems unlikely but we're depending on it below
     parsedUrl.protocol !== 'https:' ||
     parsedUrl.host !== 'content.viaplay.se'
   ) {
-    return res
-      .status(400)
-      .send('Please provide a valid movieLink query parameter');
+    return res.status(400).send(INVALID_MOVIELINK);
   }
 
   const [vpErr, vpRes] = await tryCatch(() => axios.get(parsedUrl.href));
   if (vpErr) {
     console.log(vpErr.response);
-    return res
-      .status(400)
-      .send('Please provide a valid movieLink query parameter');
+    return res.status(400).send(INVALID_MOVIELINK);
   }
   // IDEA: vpRes.data._embedded['viaplay:blocks'][0]._embedded['viaplay:product']
   // Check type here if validating instead of handling error
@@ -61,7 +62,7 @@ export const handleTrailerRequest = async (req, res) => {
   ]);
 
   if (!imdbId) {
-    res.status(200).send('No trailers found for resource link');
+    return res.status(200).send(NO_TRAILERS_FOUND);
   }
 
   const [findErr, findRes] = await tryCatch(() =>
