@@ -40,6 +40,7 @@ If any of the API calls are unsuccessful, appropriate responses will be returned
    - Horizontal scaling
      - Forking to use all cores
      - Scaling to multiple machines
+   - Code optimizations: callbacks are faster than promises and async/await
 
 ## TODOS:
 
